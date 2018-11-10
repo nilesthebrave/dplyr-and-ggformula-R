@@ -1,0 +1,144 @@
+---
+title: "Assignment 6"
+author: "Glenn Niles"
+date: "10/13/18"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Factors affecting the price of used cars
+
+Load necessary libraries here.
+```{r} 
+library(dplyr)
+library(ggformula)
+library(readr)
+```
+
+a.	Download Cars 2005.csv and load the data into R.  Display the first few lines of data.
+
+(Dataset:  "Car Data," submitted by Shonda Kuiper, Grinnell College. Dataset obtained from the Journal of Statistics Education (http://www.amstat.org/publications/jse). Accessed 3 June 2015. Used by permission of author.)
+
+
+```{r}
+cars = read_csv("Cars 2005.csv")
+head(cars)
+```
+
+***Note:**  All of parts b-k should be done using functions from `dplyr` and/or `ggformula`.
+
+b. The variables Cruise, Sound, and Leather use 1 to represent "yes" (the car has cruise control, an upgraded sound system, or a leather interior) and 0 to represent "no".  Therefore, these variables are categorical--but R treats them as numeric, because they look like 0's and 1's.
+
+The function `as.factor()` will return a categorical variable version of its argument (the variable you put inside the parentheses).  Use `mutate` and `as.factor` to convert the variables Cruise, Sound, and Leather into factor variables.
+
+```{r}
+cars = cars %>%
+        mutate(Cruise = as.factor(Cruise), Sound = as.factor(Sound), Leather = as.factor(Leather))
+```
+
+c. Make a scatterplot displaying the relationship between Price and Liter (a measure of engine size).  
+
+```{r}
+gf_point(Price ~ Liter, data = cars)%>%
+  gf_labs(title = "Price as a function of Liter",
+          x = "Liter",
+          y = "Price",
+          caption = "Source: Cars 2005")
+```
+
+- **Write a sentence** explaining which variable you chose as `x`, and why.
+I chose my Liter to be my x-axis. At first, I had price/Liter and the graph looked quite messy. After switching the plot looks cleaner and its easier to see the relationship
+between the two variables.
+- **Write a sentence** describing the relationship between these two variables.
+The relationship between price and liter isn't as strong as I predicted it would be. It still seems like in general that the bigger the engine the more the car costs. I think the 4.5L engines are throwing me off but those could be the expensive German cars too. 
+So in general, the larger the engine the more expensive the car.
+
+d. Modify your scatterplot to include the variable Leather, in addition to Price and Liter. **Include** an informative title for your graph.  
+
+```{r}
+gf_point(Price ~ Liter, col =~ Leather, data = cars)%>%
+  gf_refine(scale_color_manual(values = c("red", "green")))%>%
+    gf_labs(title = "Price as a function of Liter",
+            x = "Liter",
+            y = "Price",
+            caption = "Source: Cars 2005")
+```
+
+
+- **Write a sentence** explaining which attribute you mapped to Leather, and why.
+I used color to map the Leather variable. Since there is only two possibilities for Leather it seemed to make sense to use one color to represent one option
+and a second color to represent the other.
+
+e. Make a histogram of Price.  Use vertically-stacked facets to display the price for cars with and without leather interiors.
+
+```{r}
+gf_histogram(~ Price, data = cars) %>%
+  gf_facet_grid(Leather ~ .)
+```
+
+f. Make a histogram of Price, with side-by-side bars for cars with and without leather.
+
+```{r}
+gf_histogram(~ Price, data = cars) %>%
+  gf_facet_grid(. ~ Leather)
+```
+
+g. Make *one* barplot showing how many cars there are of each Type (Sedan, Convertible, etc.) and Leather value.
+
+```{r}
+gf_bar(~ Type, fill =~ Type, position = position_dodge(), data = cars)
+```
+
+
+h. Create a new variable in the `cars` data frame, called Tier, which classifies cars into 3 categories:  Luxury, Standard, and Economy.  Your categorization may be based on any variables in the `cars` data frame *except* Price.
+
+```{r}
+cars <-
+  cars %>%
+  mutate(Tier = case_when(
+    Make == "Cadillac" | Cylinder == 8  ~ "Luxury",
+    (Make == "Chevrolet" & Cylinder == 6) | Make == "SAAB" | Type == "Convertible" ~ "Standard",
+    TRUE ~ "Economy"
+  ))
+```
+
+
+i.  Make a dataframe showing the median price of cars of each Tier.  Display the results in increasing order of price.
+
+```{r}
+cars %>%
+  group_by(Tier) %>%
+  summarise(median = median(Price))
+```
+
+
+- **Write a sentence** discussing whether your classification makes sense:  Is the median price higher for Luxury cars than for Standard cars?  Is the median price higher for Standard cars than for Economy cars?
+
+After a lot of messing around I think I got it so its pretty even and the prices match what I would consider fair prices per Tier while having variables that make sense. Cadillacs and V8s aren't going to be economy cars, Pontiac Sunfires wouldn't be luxury, even if you got a cool convertible one, etc.
+
+j. Make a barplot showing the median price of cars of each Tier.
+- Optional:  Use code to ensure that the results will be displayed in increasing order of price.
+
+```{r}
+medianTier <-
+  cars %>%
+  group_by(Tier) %>%
+  summarise(medianPrice = median(Price))
+medianTier%>%
+mutate(Tier = reorder(Tier, medianPrice)) %>%
+gf_col(medianPrice ~ Tier)
+```
+
+k. Optional:  Use `select` and `left_join` to produce a data frame containing the columns Price, Mileage, Tier, and the median price for cars of that tier.  Display the first few rows of the data frame.
+
+```{r}
+carsEC <- select(cars, Price, Mileage, Tier)
+carsEC <- left_join(carsEC, medianTier)
+head(carsEC)
+```
+
